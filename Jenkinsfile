@@ -1,4 +1,3 @@
-```groovy
 pipeline {
     agent {
         docker {
@@ -44,14 +43,11 @@ pipeline {
         always {
             echo 'Pipeline execution completed.'
         }
-
         success {
             echo 'Build and test stages completed successfully.'
         }
-
         failure {
             echo 'Pipeline failed. Check the console output.'
         }
     }
 }
-```
