@@ -4,47 +4,40 @@ pipeline {
     environment {
         APP_NAME = 'devops-demo'
         IMAGE_TAG = '3.0'
+        REPO_URL = 'https://github.com/muzeyyenalan/springboot-devops-gitops.git'
         MAVEN_IMAGE = 'maven:3.9-eclipse-temurin-21'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Source code checked out from GitHub.'
-                sh 'pwd'
+                checkout scm
                 sh 'ls -la'
             }
         }
 
-        stage('Test') {
-            steps {
-                sh '''
-                    echo "Workspace: $WORKSPACE"
-                    docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app \
-                      "$MAVEN_IMAGE" \
-                      sh -c "pwd && ls -la && mvn test"
-                '''
-            }
-        }
-
-        stage('Build') {
+        stage('Test and Build') {
             steps {
                 sh '''
                     docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app \
+                      -e REPO_URL="$REPO_URL" \
+                      -e BRANCH_NAME=master \
                       "$MAVEN_IMAGE" \
-                      mvn package -DskipTests
+                      sh -c '
+                        apt-get update -qq &&
+                        apt-get install -y -qq git &&
+                        git clone --branch "$BRANCH_NAME" "$REPO_URL" /tmp/app &&
+                        cd /tmp/app &&
+                        mvn test &&
+                        mvn package -DskipTests
+                      '
                 '''
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t devops-demo:3.0 .'
-                sh 'docker image inspect devops-demo:3.0'
+                echo 'Docker build will be enabled after the workspace sharing is corrected.'
             }
         }
     }
@@ -54,7 +47,7 @@ pipeline {
             echo 'Pipeline execution completed.'
         }
         success {
-            echo 'Tests, package and Docker build completed successfully.'
+            echo 'Maven test and package completed successfully.'
         }
         failure {
             echo 'Pipeline failed. Check the console output.'
