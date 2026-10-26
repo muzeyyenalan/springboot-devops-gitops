@@ -1,17 +1,23 @@
+```groovy
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'maven:3.9-eclipse-temurin-21'
+            args '-v /root/.m2:/root/.m2'
+        }
+    }
 
     environment {
         APP_NAME = 'devops-demo'
-        IMAGE_TAG = '2.0'
-        K8S_NAMESPACE = 'jenkins-demo'
-        K8S_SERVER = 'https://kubernetes.docker.internal:6443'
+        IMAGE_TAG = '3.0'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Source code is provided by the Jenkins workspace.'
+                echo 'Source code checked out from GitHub.'
+                sh 'pwd'
+                sh 'ls -la'
             }
         }
 
@@ -29,13 +35,7 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t devops-demo:2.0 .'
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                echo 'Kubernetes deployment will be added after validating credentials and image availability.'
+                echo 'Docker image build will be configured after Maven validation.'
             }
         }
     }
@@ -44,11 +44,14 @@ pipeline {
         always {
             echo 'Pipeline execution completed.'
         }
+
         success {
             echo 'Build and test stages completed successfully.'
         }
+
         failure {
             echo 'Pipeline failed. Check the console output.'
         }
     }
 }
+```
