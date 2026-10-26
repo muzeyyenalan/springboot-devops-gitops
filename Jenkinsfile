@@ -1,14 +1,10 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9-eclipse-temurin-21'
-            args '-v /root/.m2:/root/.m2'
-        }
-    }
+    agent any
 
     environment {
         APP_NAME = 'devops-demo'
         IMAGE_TAG = '3.0'
+        MAVEN_IMAGE = 'maven:3.9-eclipse-temurin-21'
     }
 
     stages {
@@ -22,19 +18,32 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'mvn test'
+                sh '''
+                    docker run --rm \
+                      -v "$WORKSPACE:/app" \
+                      -w /app \
+                      maven:3.9-eclipse-temurin-21 \
+                      mvn test
+                '''
             }
         }
 
         stage('Build') {
             steps {
-                sh 'mvn package -DskipTests'
+                sh '''
+                    docker run --rm \
+                      -v "$WORKSPACE:/app" \
+                      -w /app \
+                      maven:3.9-eclipse-temurin-21 \
+                      mvn package -DskipTests
+                '''
             }
         }
 
         stage('Docker Build') {
             steps {
-                echo 'Docker image build will be configured after Maven validation.'
+                sh 'docker build -t devops-demo:3.0 .'
+                sh 'docker image inspect devops-demo:3.0'
             }
         }
     }
@@ -44,7 +53,7 @@ pipeline {
             echo 'Pipeline execution completed.'
         }
         success {
-            echo 'Build and test stages completed successfully.'
+            echo 'Maven tests, package and Docker build completed successfully.'
         }
         failure {
             echo 'Pipeline failed. Check the console output.'
