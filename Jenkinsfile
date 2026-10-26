@@ -19,11 +19,12 @@ pipeline {
         stage('Test') {
             steps {
                 sh '''
+                    echo "Workspace: $WORKSPACE"
                     docker run --rm \
                       -v "$WORKSPACE:/app" \
                       -w /app \
-                      maven:3.9-eclipse-temurin-21 \
-                      mvn test
+                      "$MAVEN_IMAGE" \
+                      sh -c "pwd && ls -la && mvn test"
                 '''
             }
         }
@@ -34,7 +35,7 @@ pipeline {
                     docker run --rm \
                       -v "$WORKSPACE:/app" \
                       -w /app \
-                      maven:3.9-eclipse-temurin-21 \
+                      "$MAVEN_IMAGE" \
                       mvn package -DskipTests
                 '''
             }
@@ -53,7 +54,7 @@ pipeline {
             echo 'Pipeline execution completed.'
         }
         success {
-            echo 'Maven tests, package and Docker build completed successfully.'
+            echo 'Tests, package and Docker build completed successfully.'
         }
         failure {
             echo 'Pipeline failed. Check the console output.'
