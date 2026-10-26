@@ -19,10 +19,9 @@ pipeline {
         stage('Test and Build') {
             steps {
                 sh '''
-                    docker run --rm \
+                    docker run --name devops-demo-maven-build \
                       -e REPO_URL="$REPO_URL" \
                       -e BRANCH_NAME=master \
-                      -v "$WORKSPACE/target:/output" \
                       "$MAVEN_IMAGE" \
                       sh -c '
                         apt-get update -qq &&
@@ -30,31 +29,19 @@ pipeline {
                         git clone --branch "$BRANCH_NAME" "$REPO_URL" /tmp/app &&
                         cd /tmp/app &&
                         mvn test &&
-                        mvn package -DskipTests &&
-                        cp target/demo-0.0.1-SNAPSHOT.jar /output/
+                        mvn package -DskipTests
                       '
-                '''
-            }
-        }
 
-        stage('Prepare Docker Context') {
-            steps {
-                sh '''
-                    mkdir -p target
-                    test -f target/demo-0.0.1-SNAPSHOT.jar
-                    cp Dockerfile target/Dockerfile
+                    docker cp devops-demo-maven-build:/tmp/app/target/demo-0.0.1-SNAPSHOT.jar "$WORKSPACE/target/demo-0.0.1-SNAPSHOT.jar"
+
+                    docker rm devops-demo-maven-build
                 '''
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh '''
-                    docker build \
-                      -f target/Dockerfile \
-                      -t ${APP_NAME}:${IMAGE_TAG} \
-                      target
-                '''
+                sh 'docker build -t devops-demo:3.0 .'
                 sh 'docker image inspect devops-demo:3.0'
             }
         }
@@ -62,11 +49,14 @@ pipeline {
 
     post {
         always {
+            sh 'docker rm -f devops-demo-maven-build 2>/dev/null || true'
             echo 'Pipeline execution completed.'
         }
+
         success {
             echo 'Tests, package and Docker image build completed successfully.'
         }
+
         failure {
             echo 'Pipeline failed. Check the console output.'
         }
