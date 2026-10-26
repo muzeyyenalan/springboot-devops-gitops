@@ -22,6 +22,7 @@ pipeline {
                     docker run --rm \
                       -e REPO_URL="$REPO_URL" \
                       -e BRANCH_NAME=master \
+                      -v "$WORKSPACE/target:/output" \
                       "$MAVEN_IMAGE" \
                       sh -c '
                         apt-get update -qq &&
@@ -29,15 +30,32 @@ pipeline {
                         git clone --branch "$BRANCH_NAME" "$REPO_URL" /tmp/app &&
                         cd /tmp/app &&
                         mvn test &&
-                        mvn package -DskipTests
+                        mvn package -DskipTests &&
+                        cp target/demo-0.0.1-SNAPSHOT.jar /output/
                       '
+                '''
+            }
+        }
+
+        stage('Prepare Docker Context') {
+            steps {
+                sh '''
+                    mkdir -p target
+                    test -f target/demo-0.0.1-SNAPSHOT.jar
+                    cp Dockerfile target/Dockerfile
                 '''
             }
         }
 
         stage('Docker Build') {
             steps {
-                echo 'Docker build will be enabled after the workspace sharing is corrected.'
+                sh '''
+                    docker build \
+                      -f target/Dockerfile \
+                      -t ${APP_NAME}:${IMAGE_TAG} \
+                      target
+                '''
+                sh 'docker image inspect devops-demo:3.0'
             }
         }
     }
@@ -47,7 +65,7 @@ pipeline {
             echo 'Pipeline execution completed.'
         }
         success {
-            echo 'Maven test and package completed successfully.'
+            echo 'Tests, package and Docker image build completed successfully.'
         }
         failure {
             echo 'Pipeline failed. Check the console output.'
