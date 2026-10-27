@@ -47,3 +47,11 @@ credentials/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local Kubernetes credentials and certificates
+jenkins-kube/
+*.crt
+*-ca*.txt
+
+# Local backups
+Jenkinsfile.backup
